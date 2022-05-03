@@ -23,11 +23,11 @@ def main():
     tasks = [env1,env2,env3]
     num_states=2
     num_actions=4
-    ALPHA = 0.0001
+    ALPHA = 5e-4
     GAMMA = 0.99
     EPSILON = 1.0
     STEPS_PER_TASK = 50000
-    BATCH_SIZE = 32
+    BATCH_SIZE = 1024
     meta_agent = Agent(
     num_states=num_states,
     num_actions=num_actions,
@@ -40,7 +40,7 @@ def main():
 
 
     maml = l2l.algorithms.MAML(meta_agent.current_network, lr=1e-2)
-    opt = optim.Adam(maml.parameters())
+    opt = optim.Adam(maml.parameters(),lr=ALPHA)
 
 
     for i in range(TIMESTEPS):
@@ -71,7 +71,7 @@ def main():
                     next_state, reward, terminal, _ = env.step(action)
                     experience = (state, action, reward, next_state, terminal)
                     task_agent.update_buffer(experience)
-                    # step_loss+=task_agent.loss(batch_size=BATCH_SIZE)
+                    step_loss+=task_agent.calculate_loss(int(BATCH_SIZE))
                     
 
                     total_reward += reward
@@ -81,7 +81,7 @@ def main():
                     # Stopping condition for episode - agent encounters terminal state
                     if terminal:
                         break
-            step_loss+=task_agent.calculate_loss(int(STEPS_PER_TASK/4))
+            # step_loss+=task_agent.calculate_loss(int(STEPS_PER_TASK/2))
 
 
 

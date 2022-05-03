@@ -129,7 +129,7 @@ class Agent:
     def calculate_loss(self, batch_size):
         self.current_network.train()
         self.step_count += 1 # incerement step counter
-
+        loss=0.0
         if len(self.replay_buffer)>batch_size:
             current_states, actions, rewards, next_states, terminals = self.sample_buffer(batch_size)
 
