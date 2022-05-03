@@ -1,0 +1,2 @@
+RENDER_MAZE = True
+ENABLE_RECORDING = False
