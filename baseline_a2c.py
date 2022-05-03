@@ -1,4 +1,5 @@
 import sys
+from termios import N_MOUSE
 import numpy as np
 import math
 import random
@@ -9,19 +10,21 @@ from gym_maze import *
 
 from stable_baselines3 import DQN
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3 import A2C
+from stable_baselines3.common.env_util import make_vec_env
 
-train =False
+train =True
 if train:
 # Create environment
-  env = gym.make('maze-sample-5x5-v0')
-
+  env = gym.make('maze-sample-10x10-v0')
+  # env = make_vec_env(env,n_envs=4)
   # Instantiate the agent
-  log_path = "./log_5x5"
-  model = DQN('MlpPolicy', env,learning_rate=0.0001,exploration_fraction=0.05, verbose=1,tensorboard_log=log_path)
+  log_path = "./log10x10"
+  model = A2C("MlpPolicy", env, verbose=1,tensorboard_log=log_path)
   # Train the agent
-  model.learn(total_timesteps=200000)
+  model.learn(total_timesteps=800000)
   # Save the agent
-  model.save("maze_5x5")
+  model.save("maze_10x10_a2c")
   #del model  # delete trained model to demonstrate loading
 
   # Load the trained agent
@@ -38,8 +41,8 @@ if train:
 
   #del model # remove to demonstrate saving and loading
 else:
-  env = gym.make('maze-sample-5x5-v0')
-  model = DQN.load("maze_5x5")
+  env = gym.make('maze-sample-10x10-v0')
+  model = A2C.load("maze_5x5_ppo")
 
   obs = env.reset()
   for _ in range(1000):
@@ -49,3 +52,5 @@ else:
       env.render()
       if done:
         obs = env.reset()
+
+
