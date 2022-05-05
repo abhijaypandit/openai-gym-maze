@@ -25,31 +25,33 @@ def make_env(env_id, rank, seed=0):
 train = False
 
 if __name__ == '__main__':
-    env_id = 'maze-sample-5x5-v0'
+    env_id = 'maze-sample-3x3-v0'
     num_cpu = 4  # Number of processes to use
+    algo = DQN
 
     # Create the vectorized environment
     #env = SubprocVecEnv([make_env(env_id, i) for i in range(num_cpu)])
     env = make_vec_env(env_id, n_envs=num_cpu, seed=0, vec_env_cls=DummyVecEnv)
 
     # Instantiate the agent
-    model = A2C('MlpPolicy',
+    model = algo('MlpPolicy',
                 env=env,
                 learning_rate=0.001,
                 #exploration_fraction=0.05,
                 verbose=1,
-                tensorboard_log=env_id
+                tensorboard_log='log-'+env_id
             )
 
     if train:
         # Train the agent
-        model.learn(total_timesteps=2e5)
+        model.learn(total_timesteps=1e5)
         # Save the agent
         model.save(env_id)
         # Delete environment
         del env
 
     env = gym.make(env_id)
+    model.load(env_id)
 
     obs = env.reset()
     for _ in range(1000):
