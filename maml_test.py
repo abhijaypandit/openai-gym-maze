@@ -1,33 +1,31 @@
-
-#!/usr/bin/env python3
-
-
 import torch as th
 from torch import nn, optim, distributions as dist
 import gym
 from gym_maze import *
 import learn2learn as l2l
 from copy import deepcopy
-DIM = 5
-TIMESTEPS = 1000
-TASKS_PER_STEP = 3
 from lander_q1 import Agent
 
 
+th.autograd.set_detect_anomaly(True)
 
+DIM = 5
+TIMESTEPS = 10
+TASKS_PER_STEP = 3
 
 def main():
     env1 = gym.make('maze-random-3x3-v0')
     env2 = gym.make('maze-random-3x3-v0')
     env3 = gym.make('maze-random-3x3-v0')
-    tasks = [env1,env2,env3]
+    tasks = [env1, env2, env3]
+
     num_states=2
     num_actions=4
     ALPHA = 5e-4
     GAMMA = 0.99
     EPSILON = 1.0
-    STEPS_PER_TASK = 50000
-    BATCH_SIZE = 1024
+    STEPS_PER_TASK = 5
+    BATCH_SIZE = 32
     meta_agent = Agent(
     num_states=num_states,
     num_actions=num_actions,
@@ -47,6 +45,7 @@ def main():
         step_loss = 0.0
         total_reward = 0.0
         epsiodes=0
+    
         for t in range(TASKS_PER_STEP):
             # Sample a task
             # task_params = task_dist.sample()
@@ -70,8 +69,9 @@ def main():
                     action = task_agent.take_action(state)
                     next_state, reward, terminal, _ = env.step(action)
                     experience = (state, action, reward, next_state, terminal)
+                    #print("experience: ", experience)
                     task_agent.update_buffer(experience)
-                    step_loss+=task_agent.calculate_loss(int(BATCH_SIZE))
+                    step_loss = step_loss + task_agent.calculate_loss(int(BATCH_SIZE))
                     
 
                     total_reward += reward
@@ -82,7 +82,7 @@ def main():
                     if terminal:
                         break
             # step_loss+=task_agent.calculate_loss(int(STEPS_PER_TASK/2))
-
+            #print("Step {} :: Task {} :: Loss {}".format(i,t,step_loss))
 
 
 
@@ -91,7 +91,8 @@ def main():
         avg_reward = total_reward/(epsiodes)
         print(i, "Average episodic reward",avg_reward,", Step loss:",step_loss.item())
         opt.zero_grad()
-        step_loss.backward(retain_graph=True)
+        #step_loss.backward(retain_graph=True)
+        step_loss.backward()
         opt.step()
 
 

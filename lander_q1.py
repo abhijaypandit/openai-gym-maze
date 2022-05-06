@@ -55,7 +55,8 @@ class Agent:
 
         # Current and target networks
         self.current_network = Network(num_states, num_actions)
-        self.target_network = deepcopy(self.current_network)
+        #self.target_network = deepcopy(self.current_network)
+        self.target_network = Network(num_states, num_actions)
         self.update_freq = update_freq
         self.step_count = 0
 
@@ -148,7 +149,10 @@ class Agent:
             self.optimizer.step()
 
             if self.step_count % self.update_freq == 0:
-                self.target_network = deepcopy(self.current_network) # update target network
+                #self.target_network = deepcopy(self.current_network) # update target network
+                states = self.current_network.state_dict()
+                states = {k.replace('module.',''): v for k, v in states.items()}
+                self.target_network.load_state_dict(states)
 
         return loss
 
