@@ -130,7 +130,8 @@ class Agent:
         if len(self.replay_buffer)>batch_size:
             current_states, actions, rewards, next_states, terminals = self.sample_buffer(batch_size)
 
-            target_q = self.target_network(torch.tensor(next_states).float())
+            with torch.no_grad():
+                target_q = self.target_network(torch.tensor(next_states).float())
             current_q = self.current_network(torch.tensor(current_states).float())
 
             target = torch.tensor(rewards) + torch.max(target_q, axis=1)[0] * torch.tensor(np.ones(batch_size) - terminals)
@@ -144,11 +145,11 @@ class Agent:
             # loss.backward(retain_graph=True)
             # self.optimizer.step()
 
-            # if self.step_count % self.update_freq == 0:
-            #     #self.target_network = deepcopy(self.current_network) # update target network
-            #     states = self.current_network.state_dict()
-            #     states = {k.replace('module.',''): v for k, v in states.items()}
-            #     self.target_network.load_state_dict(states)
+            if self.step_count % self.update_freq == 0:
+                #self.target_network = deepcopy(self.current_network) # update target network
+                states = self.current_network.state_dict()
+                states = {k.replace('module.',''): v for k, v in states.items()}
+                self.target_network.load_state_dict(states)
 
         return loss
 
