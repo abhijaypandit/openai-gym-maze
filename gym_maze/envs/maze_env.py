@@ -133,7 +133,7 @@ class MazeEnvRandom10x10(MazeEnv):
 
 class MazeEnvSample3x3(MazeEnv):
 
-    def __init__(self, enable_render=True):
+    def __init__(self, enable_render=RENDER_MAZE):
         super(MazeEnvSample3x3, self).__init__(maze_file="maze2d_3x3.npy", enable_render=enable_render)
 
 
