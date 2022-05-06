@@ -122,6 +122,35 @@ class Agent:
             if self.step_count % self.update_freq == 0:
                 self.target_network = deepcopy(self.current_network) # update target network
 
+    def calculate_loss(self, batch_size):
+        self.current_network.train()
+        self.step_count += 1 # incerement step counter
+        loss = 0
+        
+        if len(self.replay_buffer)>batch_size:
+            current_states, actions, rewards, next_states, terminals = self.sample_buffer(batch_size)
+
+            target_q = self.target_network(torch.tensor(next_states).float())
+            current_q = self.current_network(torch.tensor(current_states).float())
+
+            target = torch.tensor(rewards) + torch.max(target_q, axis=1)[0] * torch.tensor(np.ones(batch_size) - terminals)
+            current = current_q.gather(dim=1, index=torch.tensor(actions.reshape(actions.shape[0], -1)))
+
+            # Calculate loss
+            loss = self.loss(target.unsqueeze(1).double(), current.double())
+
+            # Backpropagate loss
+            # self.optimizer.zero_grad()
+            # loss.backward(retain_graph=True)
+            # self.optimizer.step()
+
+            # if self.step_count % self.update_freq == 0:
+            #     #self.target_network = deepcopy(self.current_network) # update target network
+            #     states = self.current_network.state_dict()
+            #     states = {k.replace('module.',''): v for k, v in states.items()}
+            #     self.target_network.load_state_dict(states)
+
+        return loss
 
 if __name__ == '__main__':
     env = gym.make("maze-random-3x3-v0")
