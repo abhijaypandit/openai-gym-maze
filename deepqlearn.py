@@ -7,7 +7,7 @@ import torch
 from torch.nn import Module, Linear, MSELoss
 from torch.nn.functional import relu
 from torch.optim import Adam
-from torchsummary import summary
+# from torchsummary import summary
 
 from collections import deque
 from copy import deepcopy
@@ -141,9 +141,9 @@ class Agent:
             loss = self.loss(target.unsqueeze(1).double(), current.double())
 
             # Backpropagate loss
-            # self.optimizer.zero_grad()
-            # loss.backward(retain_graph=True)
-            # self.optimizer.step()
+            self.optimizer.zero_grad()
+            loss.backward(retain_graph=True)
+            self.optimizer.step()
 
             if self.step_count % self.update_freq == 0:
                 #self.target_network = deepcopy(self.current_network) # update target network
