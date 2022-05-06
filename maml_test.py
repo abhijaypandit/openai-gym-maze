@@ -110,10 +110,10 @@ def main():
         step_loss.backward()
         opt.step()
 
-        #self.target_network = deepcopy(self.current_network) # update target network
-        states = task_agent.current_network.state_dict()
-        states = {k.replace('module.',''): v for k, v in states.items()}
-        task_agent.target_network.load_state_dict(states)
+        # #self.target_network = deepcopy(self.current_network) # update target network
+        # states = task_agent.current_network.state_dict()
+        # states = {k.replace('module.',''): v for k, v in states.items()}
+        # task_agent.target_network.load_state_dict(states)
 
 
 if __name__ == '__main__':
