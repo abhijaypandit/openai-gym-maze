@@ -1,4 +1,3 @@
-from sqlite3 import adapt
 import torch as th
 from torch import nn, optim, distributions as dist
 import gym
@@ -102,7 +101,6 @@ def main():
             # Accumulate the error over all tasks
             step_loss += adapt_loss
 
-
         # Meta-learning step: compute gradient through the adaptation step, automatically.
         step_loss = step_loss / TASKS_PER_STEP
         avg_reward = total_reward/(epsiodes)
@@ -111,6 +109,11 @@ def main():
         #step_loss.backward(retain_graph=True)
         step_loss.backward()
         opt.step()
+
+        #self.target_network = deepcopy(self.current_network) # update target network
+        states = task_agent.current_network.state_dict()
+        states = {k.replace('module.',''): v for k, v in states.items()}
+        task_agent.target_network.load_state_dict(states)
 
 
 if __name__ == '__main__':
