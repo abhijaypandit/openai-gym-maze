@@ -35,13 +35,14 @@ class Network(Module):
 
 class Agent:
 
-    def __init__(self, env, num_states, num_actions, alpha, gamma, epsilon, buffer_size, update_freq):
+    def __init__(self, env, num_states, num_actions, alpha, gamma, epsilon, buffer_size, update_freq,eps_upd_freq):
         self.env = env
 
         # Hyperparameters
         self.alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
+        self.eps_freq=eps_upd_freq
 
         # Replay buffer
         self.replay_buffer = deque(maxlen=buffer_size)
@@ -58,18 +59,17 @@ class Agent:
 
     # Function to select action using epsilon-greedy
     def take_action(self, state):
-        if self.step_count % self.update_freq == 0:
+        if self.step_count % self.eps_freq == 0:
             self.epsilon = max(0.8*self.epsilon, 0.01) # decay epsilon
         #self.epsilon = max(0.001, min(0.8, 1.0 - math.log10((self.step_count+1)/
         #                np.prod(tuple((env.observation_space.high + np.ones(env.observation_space.shape)).astype(int)), dtype=float) / 10.0)))
-
-        if np.random.rand() > self.epsilon:
-            self.current_network.eval()
-            with torch.no_grad():
-                action = int(np.argmax(self.current_network(torch.from_numpy(state).float()).numpy()))
+        with torch.no_grad():
+            max_a = int(np.argmax(self.current_network(torch.from_numpy(state).float()).numpy()))
+        rand_action = self.env.action_space.sample()
+        if self.epsilon>0.05:
+            action = np.random.choice([max_a,rand_action],1,p=[1.0-self.epsilon,self.epsilon])
         else:
-            action = self.env.action_space.sample()
-
+            action = max_a
         #action = env.action_space.sample()
         return action
 
@@ -104,12 +104,14 @@ class Agent:
 
         if self.step_count >= batch_size:
             current_states, actions, rewards, next_states, terminals = self.sample_buffer(batch_size)
+            terminals = np.array([1 if x==True else 0 for x in terminals])
 
-            target_q = self.target_network(torch.tensor(next_states).float())
+            with torch.no_grad():
+                target_q = self.target_network(torch.tensor(next_states).float())
             current_q = self.current_network(torch.tensor(current_states).float())
 
-            target = torch.tensor(rewards) + torch.max(target_q, axis=1)[0] * torch.tensor(np.ones(batch_size) - terminals)
-            current = current_q.gather(dim=1, index=torch.tensor(actions.reshape(actions.shape[0], -1)))
+            target = torch.tensor(rewards) + torch.max(target_q, axis=1)[0] * torch.from_numpy(np.ones(batch_size) - terminals)
+            current = current_q.gather(dim=1, index=torch.from_numpy(actions.reshape(actions.shape[0], -1)))
 
             # Calculate loss
             loss = self.loss(target.unsqueeze(1).double(), current.double())
@@ -154,14 +156,14 @@ class Agent:
         return loss
 
 if __name__ == '__main__':
-    env = gym.make("maze-random-3x3-v0")
+    env = gym.make("maze-sample-3x3-v0")
 
     num_actions = 4 # up, down, left, right
     num_states = 2 # (x,y) coordinates
 
-    ALPHA = 0.001
+    ALPHA = 5e-4
     GAMMA = 0.9
-    EPSILON = 0.8
+    EPSILON = 1.0
 
     agent = Agent(
         env = env,
@@ -171,15 +173,16 @@ if __name__ == '__main__':
         gamma=GAMMA,
         epsilon=EPSILON,
         buffer_size=1000,
-        update_freq=1024
+        update_freq=1028,
+        eps_upd_freq=5000
     )
     
     #summary(agent.current_network, input_size=(num_states,))
     #summary(agent.target_network, input_size=(num_states,))    
 
-    EPISODES = 2000
-    STEPS = 18
-    BATCH_SIZE = 32
+    EPISODES = 20000
+    STEPS = 50
+    BATCH_SIZE = 128
 
     raw_rewards = []
     avg_rewards = []
@@ -214,14 +217,15 @@ if __name__ == '__main__':
 
 
         #print("\rEpisode {}: raw_reward = {:.4f}, avg_reward = {:.4f}".format(len(raw_rewards), raw_rewards[-1], avg_rewards[-1]), end="\x1b[2K")
-        print("\rEpisode {}: raw_reward = {:.4f}, avg_reward = {:.4f}, epsilon = {:.4f}".format(len(raw_rewards), raw_rewards[-1], avg_rewards[-1], agent.epsilon))
+        if len(raw_rewards)%1==0:
+            print("\rEpisode {}: raw_reward = {:.4f}, avg_reward = {:.4f}, epsilon = {:.4f}".format(len(raw_rewards), raw_rewards[-1], avg_rewards[-1], agent.epsilon))
     
-        plt.plot(raw_rewards, color='blue', label="raw")
-        plt.plot(avg_rewards, color='red', label="average")
-        plt.pause(0.05)
-        plt.draw()
+        # plt.plot(raw_rewards, color='blue', label="raw")
+        # plt.plot(avg_rewards, color='red', label="average")
+        # plt.pause(0.05)
+        # plt.draw()
     
-    plt.show()
+    # plt.show()
 
     # plt.plot(raw_rewards, label="raw")
     # plt.plot(avg_rewards, label="average")

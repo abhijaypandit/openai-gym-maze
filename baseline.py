@@ -10,18 +10,18 @@ from gym_maze import *
 from stable_baselines3 import DQN
 from stable_baselines3.common.evaluation import evaluate_policy
 
-train =False
+train =True
 if train:
 # Create environment
-  env = gym.make('maze-sample-5x5-v0')
+  env = gym.make('maze-sample-3x3-v0')
 
   # Instantiate the agent
   log_path = "./log_5x5"
-  model = DQN('MlpPolicy', env,learning_rate=0.0001,exploration_fraction=0.05, verbose=1,tensorboard_log=log_path)
+  model = DQN('MlpPolicy', env,learning_rate=0.0001,exploration_fraction=0.05, verbose=1)
   # Train the agent
   model.learn(total_timesteps=200000)
   # Save the agent
-  model.save("maze_5x5")
+  # model.save("maze_5x5")
   #del model  # delete trained model to demonstrate loading
 
   # Load the trained agent
@@ -38,8 +38,8 @@ if train:
 
   #del model # remove to demonstrate saving and loading
 else:
-  env = gym.make('maze-sample-5x5-v0')
-  model = DQN.load("maze_5x5")
+  env = gym.make('maze-sample-3x3-v0')
+  model = DQN.load("maze_3x3")
 
   obs = env.reset()
   for _ in range(1000):

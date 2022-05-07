@@ -11,23 +11,24 @@ from deepqlearn import Agent
 th.autograd.set_detect_anomaly(True)
 
 DIM = 5
-TIMESTEPS = 500
+TIMESTEPS = 100000
 TASKS_PER_STEP = 3
 
 def main():
     env1 = gym.make('maze-random-3x3-v0')
     env2 = gym.make('maze-random-3x3-v0')
     env3 = gym.make('maze-random-3x3-v0')
-    tasks = [env1, env2, env3]
-
+    # tasks = [env1, env2, env3]
+    tasks = [env1]
     num_states=2
     num_actions=4
     
-    ALPHA = 5e-4
+    ALPHA = 0.0001
+    ALPHA_meta = 5e-4
     GAMMA = 0.99
     EPSILON = 1.0
-    STEPS_PER_TASK = 1024
-    BATCH_SIZE = 32
+    STEPS_PER_TASK = 1
+    BATCH_SIZE = 64
     
     meta_agent = Agent(
         env = env1,
@@ -52,7 +53,7 @@ def main():
     )
 
     task_agent2 = Agent(
-        env = env1,
+        env = env2,
         num_states=num_states,
         num_actions=num_actions,
         alpha=ALPHA,
@@ -63,7 +64,7 @@ def main():
     )
 
     task_agent3 = Agent(
-        env = env1,
+        env = env3,
         num_states=num_states,
         num_actions=num_actions,
         alpha=ALPHA,
@@ -72,8 +73,8 @@ def main():
         buffer_size=10000,
         update_freq=512
     )
-    maml = l2l.algorithms.MAML(meta_agent.current_network, lr=5e-4)
-    opt = optim.Adam(maml.parameters(),lr=ALPHA)
+    maml = l2l.algorithms.MAML(meta_agent.current_network, lr=ALPHA_meta)
+    opt = optim.Adam(maml.parameters(),lr=ALPHA_meta)
 
     agents = [task_agent1,task_agent2,task_agent3]
     for i in range(TIMESTEPS):
@@ -85,7 +86,7 @@ def main():
             env  = tasks[t]
             task_agent = agents[t]
             # Adaptation: Instantiate a copy of model
-            task_agent.current_network = maml.clone()
+            # task_agent.current_network = maml.clone()
 
             steps = 0
             while steps<STEPS_PER_TASK:
@@ -108,8 +109,9 @@ def main():
                     steps+=1
 
                     # Stopping condition for episode - agent encounters terminal state
-                    if terminal or steps == STEPS_PER_TASK:
+                    if terminal :
                         break
+                # print("Step count Agent{}:{}".format(t+1,task_agent.step_count))
 
             # step_loss+=task_agent.calculate_loss(int(STEPS_PER_TASK/2))
             #print("Step {} :: Task {} :: Loss {}".format(i,t,step_loss))
@@ -127,12 +129,13 @@ def main():
         # Meta-learning step: compute gradient through the adaptation step, automatically.
         step_loss = step_loss / (TASKS_PER_STEP*STEPS_PER_TASK)
         avg_reward = total_reward/(epsiodes)
-        print(i, "Average episodic reward",avg_reward,", Step loss:",step_loss.item())
-        opt.zero_grad()
-        #step_loss.backward(retain_graph=True)
-        step_loss.backward()
-        opt.step()
-        th.save(meta_agent.current_network.state_dict(),'./meta_multi_agent_3x3.pth')
+        if(step_loss!=0.0):
+            print(i, "Average episodic reward",avg_reward,", Step loss:",step_loss.item())
+            # opt.zero_grad()
+            #step_loss.backward(retain_graph=True)
+            # step_loss.backward()
+            # opt.step()
+            # th.save(meta_agent.current_network.state_dict(),'./meta_multi_agent_3x3.pth')
 
 
 if __name__ == '__main__':
