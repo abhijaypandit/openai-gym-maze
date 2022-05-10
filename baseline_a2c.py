@@ -13,18 +13,18 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3 import A2C
 from stable_baselines3.common.env_util import make_vec_env
 
-train =True
+train =False
 if train:
 # Create environment
-  env = gym.make('maze-sample-10x10-v0')
+  env = gym.make('maze-sample-3x3-v0')
   # env = make_vec_env(env,n_envs=4)
   # Instantiate the agent
   log_path = "./log10x10"
   model = A2C("MlpPolicy", env, verbose=1,tensorboard_log=log_path)
   # Train the agent
-  model.learn(total_timesteps=800000)
+  model.learn(total_timesteps=100000)
   # Save the agent
-  model.save("maze_10x10_a2c")
+  model.save("maze_3x3_a2c")
   #del model  # delete trained model to demonstrate loading
 
   # Load the trained agent
@@ -41,8 +41,9 @@ if train:
 
   #del model # remove to demonstrate saving and loading
 else:
-  env = gym.make('maze-sample-10x10-v0')
-  model = A2C.load("maze_5x5_ppo")
+  env = gym.make('maze-sample-3x3-v0')
+  env = gym.wrappers.Monitor(env, "recording",force=True)
+  model = A2C.load("maze_3x3_a2c")
 
   obs = env.reset()
   for _ in range(1000):

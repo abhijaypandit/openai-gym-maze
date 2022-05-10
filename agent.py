@@ -12,7 +12,7 @@ import math
 import operator
 
 BUFFER_SIZE = int(1e5)      # replay buffer size
-BATCH_SIZE = 64             # minibatch size
+BATCH_SIZE = 512             # minibatch size
 GAMMA = 0.99                # discount factor
 TAU = 1e-3                  # for soft update of target parameters
 LR = 5e-4                   # learning rate 
@@ -23,7 +23,6 @@ UPDATE_MEM_EVERY = 20          # how often to update the priorities
 UPDATE_MEM_PAR_EVERY = 3000     # how often to update the hyperparameters
 EXPERIENCES_PER_SAMPLING = math.ceil(BATCH_SIZE * UPDATE_MEM_EVERY / UPDATE_NN_EVERY)
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class Agent():
     """Interacts with and learns from the environment."""
@@ -41,10 +40,11 @@ class Agent():
         self.action_size = action_size
         self.seed = random.seed(seed)
         self.compute_weights = compute_weights
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         # Q-Network
-        self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)
-        self.qnetwork_target = QNetwork(state_size, action_size, seed).to(device)
+        self.qnetwork_local = QNetwork(state_size, action_size, seed).to(self.device)
+        self.qnetwork_target = QNetwork(state_size, action_size, seed).to(self.device)
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
         self.criterion = nn.MSELoss()
 
@@ -60,6 +60,7 @@ class Agent():
     
     def step(self, state, action, reward, next_state, done):
         # Save experience in replay memory
+        loss=torch.tensor(0.0)
         self.memory.add(state, action, reward, next_state, done)
         
         # Learn every UPDATE_NN_EVERY time steps.
@@ -72,9 +73,11 @@ class Agent():
             # If enough samples are available in memory, get random subset and learn
             if self.memory.experience_count > EXPERIENCES_PER_SAMPLING:
                 sampling = self.memory.sample()
-                self.learn(sampling, GAMMA)
+                loss=self.learn(sampling, GAMMA)
         if self.t_step_mem == 0:
             self.memory.update_memory_sampling()
+        
+        return loss
 
     def act(self, state, eps=0.):
         """Returns actions for given state as per current policy.
@@ -84,7 +87,7 @@ class Agent():
             state (array_like): current state
             eps (float): epsilon, for epsilon-greedy action selection
         """
-        state = torch.from_numpy(state).float().unsqueeze(0).to(device)
+        state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
         self.qnetwork_local.eval()
         with torch.no_grad():
             action_values = self.qnetwork_local(state)
@@ -116,15 +119,17 @@ class Agent():
                 weight = sum(np.multiply(weights, loss.data.cpu().numpy()))
             loss *= weight
         self.optimizer.zero_grad()
-        loss.backward()
+        loss.backward(retain_graph=True)
         self.optimizer.step()
         # ------------------- update target network ------------------- #
         self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
 
         # ------------------- update priorities ------------------- #
-        delta = abs(expected_values - output.detach()).numpy()
+        
+        delta = abs(expected_values.cpu() - output.detach().cpu()).numpy()
         #print("delta", delta)      
-        self.memory.update_priorities(delta, indices)  
+        self.memory.update_priorities(delta, indices)
+        return loss
 
     def soft_update(self, local_model, target_model, tau):
         """Soft update model parameters.

@@ -2,6 +2,7 @@ import sys
 import numpy as np
 import math
 import random
+import time
 
 import gym
 import gym_maze
@@ -13,7 +14,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 train =False
 if train:
 # Create environment
-  env = gym.make('maze-sample-5x5-v0')
+  env = gym.make('maze-sample-3x-v0')
 
   # Instantiate the agent
   log_path = "./log_5x5"
@@ -39,6 +40,7 @@ if train:
   #del model # remove to demonstrate saving and loading
 else:
   env = gym.make('maze-sample-5x5-v0')
+  env = gym.wrappers.Monitor(env, "recording",force=True)
   model = DQN.load("maze_5x5")
 
   obs = env.reset()
@@ -47,5 +49,6 @@ else:
       obs, reward, done, info = env.step(action)
       #print("DEBUG: action = ", action)
       env.render()
+      time.sleep(0.2)
       if done:
         obs = env.reset()
